@@ -1,22 +1,12 @@
 #!/bin/bash
 
-#======================================================
-#   System Required: CentOS 7+ / Debian 8+ / Ubuntu 16+
-#   Description: Manage v2-ui
-#   Author: sprov
-#   Blog: https://blog.sprov.xyz
-#   Github - v2-ui: https://github.com/sprov065/v2-ui
-#======================================================
-
 red='\033[0;31m'
 green='\033[0;32m'
 yellow='\033[0;33m'
 plain='\033[0m'
 
-version="v1.0.1"
-
 # check root
-[[ $EUID -ne 0 ]] && echo -e "${red}错误: ${plain} 必须使用root用户运行此脚本！\n" && exit 1
+[[ $EUID -ne 0 ]] && echo -e "${red}Error: ${plain} must be root to run this script!\n" && exit 1
 
 # check os
 if [[ -f /etc/redhat-release ]]; then
@@ -34,7 +24,7 @@ elif cat /proc/version | grep -Eqi "ubuntu"; then
 elif cat /proc/version | grep -Eqi "centos|red hat|redhat"; then
     release="centos"
 else
-    echo -e "${red}未检测到系统版本，请联系脚本作者！${plain}\n" && exit 1
+    echo -e "${red} no system version detected, please contact the script author! ${plain}\n" && exit 1
 fi
 
 os_version=""
@@ -49,21 +39,21 @@ fi
 
 if [[ x"${release}" == x"centos" ]]; then
     if [[ ${os_version} -le 6 ]]; then
-        echo -e "${red}请使用 CentOS 7 或更高版本的系统！${plain}\n" && exit 1
+        echo -e "${red}Please use CentOS 7 or later! ${plain}\n" && exit 1
     fi
 elif [[ x"${release}" == x"ubuntu" ]]; then
     if [[ ${os_version} -lt 16 ]]; then
-        echo -e "${red}请使用 Ubuntu 16 或更高版本的系统！${plain}\n" && exit 1
+        echo -e "${red}Please use Ubuntu 16 or later! ${plain}\n" && exit 1
     fi
 elif [[ x"${release}" == x"debian" ]]; then
     if [[ ${os_version} -lt 8 ]]; then
-        echo -e "${red}请使用 Debian 8 或更高版本的系统！${plain}\n" && exit 1
+        echo -e "${red}Please use Debian 8 or later! ${plain}\n" && exit 1
     fi
 fi
 
 confirm() {
     if [[ $# > 1 ]]; then
-        echo && read -p "$1 [默认$2]: " temp
+        echo && read -p "$1 [default $2]: " temp
         if [[ x"${temp}" == x"" ]]; then
             temp=$2
         fi
@@ -78,7 +68,7 @@ confirm() {
 }
 
 confirm_restart() {
-    confirm "是否重启面板" "y"
+    confirm "Whether to restart the panel, restarting the panel will also restart xray" "y"
     if [[ $? == 0 ]]; then
         restart
     else
@@ -87,12 +77,12 @@ confirm_restart() {
 }
 
 before_show_menu() {
-    echo && echo -n -e "${yellow}按回车返回主菜单: ${plain}" && read temp
+    echo && echo -n -e "${yellow} press enter to return to the main menu: ${plain}" && read temp
     show_menu
 }
 
 install() {
-    bash <(curl -Ls https://blog.sprov.xyz/v2-ui.sh)
+    bash <(curl -Ls https://raw.githubusercontent.com/vaxilu/x-ui/master/install.sh)
     if [[ $? == 0 ]]; then
         if [[ $# == 0 ]]; then
             start
@@ -103,48 +93,40 @@ install() {
 }
 
 update() {
-    confirm "本功能会强制重装当前最新版，数据不会丢失，是否继续?" "n"
+    confirm "This function will force the latest version to be reinstalled without losing data. Do you want to continue?" "n"
     if [[ $? != 0 ]]; then
-        echo -e "${red}已取消${plain}"
+        echo -e "${red} canceled ${plain}"
         if [[ $# == 0 ]]; then
             before_show_menu
         fi
         return 0
     fi
-    bash <(curl -Ls https://blog.sprov.xyz/v2-ui.sh)
+    bash <(curl -Ls https://raw.githubusercontent.com/vaxilu/x-ui/master/install.sh)
     if [[ $? == 0 ]]; then
-        echo -e "${green}更新完成，已自动重启面板${plain}"
-        exit
-#        if [[ $# == 0 ]]; then
-#            restart
-#        else
-#            restart 0
-#        fi
+        echo -e "${green} update completed, the panel has been automatically restarted ${plain}"
+        exit 0
     fi
 }
 
 uninstall() {
-    confirm "确定要卸载面板吗?" "n"
+    confirm "Are you sure you want to uninstall the panel, xray will also be uninstalled?" "n"
     if [[ $? != 0 ]]; then
         if [[ $# == 0 ]]; then
             show_menu
         fi
         return 0
     fi
-    systemctl stop v2-ui
-    systemctl disable v2-ui
-    rm /etc/systemd/system/v2-ui.service -f
+    systemctl stop x-ui
+    systemctl disable x-ui
+    rm /etc/systemd/system/x-ui.service -f
     systemctl daemon-reload
     systemctl reset-failed
-    rm /etc/v2-ui/ -rf
-    rm /usr/local/v2-ui/ -rf
+    rm /etc/x-ui/ -rf
+    rm /usr/local/x-ui/ -rf
 
     echo ""
-    echo -e "卸载成功，如果你想删除此脚本，则退出脚本后运行 ${green}rm /usr/bin/v2-ui -f${plain} 进行删除"
+    echo -e "Uninstalled successfully, if you want to delete this script, run ${green}rm /usr/bin/x-ui -f${plain} to delete it after exiting the script"
     echo ""
-    echo -e "Telegram 群组: ${green}https://t.me/sprov_blog${plain}"
-    echo -e "Github issues: ${green}https://github.com/sprov065/v2-ui/issues${plain}"
-    echo -e "博客: ${green}https://blog.sprov.xyz/v2-ui${plain}"
 
     if [[ $# == 0 ]]; then
         before_show_menu
@@ -152,39 +134,39 @@ uninstall() {
 }
 
 reset_user() {
-    confirm "确定要将用户名和密码重置为 admin 吗" "n"
+    confirm "Are you sure you want to reset username and password to admin" "n"
     if [[ $? != 0 ]]; then
         if [[ $# == 0 ]]; then
             show_menu
         fi
         return 0
     fi
-    /usr/local/v2-ui/v2-ui resetuser
-    echo -e "用户名和密码已重置为 ${green}admin${plain}，现在请重启面板"
+    /usr/local/x-ui/x-ui setting -username admin -password admin
+    echo -e "Username and password have been reset to ${green}admin${plain}, please restart the panel now"
     confirm_restart
 }
 
 reset_config() {
-    confirm "确定要重置所有面板设置吗，账号数据不会丢失，用户名和密码不会改变" "n"
+    confirm "Are you sure you want to reset all panel settings, account data will not be lost, username and password will not be changed" "n"
     if [[ $? != 0 ]]; then
         if [[ $# == 0 ]]; then
             show_menu
         fi
         return 0
     fi
-    /usr/local/v2-ui/v2-ui resetconfig
-    echo -e "所有面板已重置为默认值，现在请重启面板，并使用默认的 ${green}65432${plain} 端口访问面板"
+    /usr/local/x-ui/x-ui setting -reset
+    echo -e "All panel settings have been reset to default, please restart the panel now and use the default ${green}54321${plain} port to access the panel"
     confirm_restart
 }
 
 set_port() {
-    echo && echo -n -e "输入端口号[1-65535]: " && read port
+    echo && echo -n -e "input port number [1-65535]: " && read port
     if [[ -z "${port}" ]]; then
-        echo -e "${yellow}已取消${plain}"
+        echo -e "${yellow} canceled ${plain}"
         before_show_menu
     else
-        /usr/local/v2-ui/v2-ui setport ${port}
-        echo -e "设置端口完毕，现在请重启面板，并使用新设置的端口 ${green}${port}${plain} 访问面板"
+        /usr/local/x-ui/x-ui setting -port ${port}
+        echo -e "The port is set, now please restart the panel and use the newly set port ${green}${port}${plain} to access the panel"
         confirm_restart
     fi
 }
@@ -193,15 +175,15 @@ start() {
     check_status
     if [[ $? == 0 ]]; then
         echo ""
-        echo -e "${green}面板已运行，无需再次启动，如需重启请选择重启${plain}"
+        echo -e "${green} panel is already running, no need to restart, if you want to restart, please choose restart ${plain}"
     else
-        systemctl start v2-ui
+        systemctl start x-ui
         sleep 2
         check_status
         if [[ $? == 0 ]]; then
-            echo -e "${green}v2-ui 启动成功${plain}"
+            echo -e "${green}x-ui started successfully ${plain}"
         else
-            echo -e "${red}面板启动失败，可能是因为启动时间超过了两秒，请稍后查看日志信息${plain}"
+            echo -e "The ${red} panel failed to start, probably because the startup time exceeded two seconds, please check the log information later ${plain}"
         fi
     fi
 
@@ -214,16 +196,19 @@ stop() {
     check_status
     if [[ $? == 1 ]]; then
         echo ""
-        echo -e "${green}面板已停止，无需再次停止${plain}"
+        echo -e "${green} panel has stopped, no need to stop ${plain} again"
     else
-        systemctl stop v2-ui
+        systemctl stop x-ui
         sleep 2
         check_status
         if [[ $? == 1 ]]; then
-            echo -e "${green}v2-ui 停止成功${plain}"
+            echo -e "${green}x-ui and xray stopped successfully ${plain}"
         else
-            echo -e "${red}面板停止失败，可能是因为停止时间超过了两秒，请稍后查看日志信息${plain}"
+            echo -e "${red} panel failed to stop, maybe because the stop time exceeded two seconds, please check the log information later ${plain}"
         fi
+    fi
+
+    fi
     fi
 
     if [[ $# == 0 ]]; then
@@ -232,13 +217,13 @@ stop() {
 }
 
 restart() {
-    systemctl restart v2-ui
+    systemctl restart x-ui
     sleep 2
     check_status
     if [[ $? == 0 ]]; then
-        echo -e "${green}v2-ui 重启成功${plain}"
+        echo -e "${green}x-ui and xray restarted successfully ${plain}"
     else
-        echo -e "${red}面板重启失败，可能是因为启动时间超过了两秒，请稍后查看日志信息${plain}"
+        echo -e "${red} panel failed to restart, maybe because the startup time exceeded two seconds, please check the log information later ${plain}"
     fi
     if [[ $# == 0 ]]; then
         before_show_menu
@@ -246,18 +231,18 @@ restart() {
 }
 
 status() {
-    systemctl status v2-ui -l
+    systemctl status x-ui -l
     if [[ $# == 0 ]]; then
         before_show_menu
     fi
 }
 
 enable() {
-    systemctl enable v2-ui
+    systemctl enable x-ui
     if [[ $? == 0 ]]; then
-        echo -e "${green}v2-ui 设置开机自启成功${plain}"
+        echo -e "${green}x-ui set boot up successfully ${plain}"
     else
-        echo -e "${red}v2-ui 设置开机自启失败${plain}"
+        echo -e "${red}x-ui failed to set boot auto-start ${plain}"
     fi
 
     if [[ $# == 0 ]]; then
@@ -266,11 +251,11 @@ enable() {
 }
 
 disable() {
-    systemctl disable v2-ui
+    systemctl disable x-ui
     if [[ $? == 0 ]]; then
-        echo -e "${green}v2-ui 取消开机自启成功${plain}"
+        echo -e "${green}x-ui canceled boot auto-start successfully ${plain}"
     else
-        echo -e "${red}v2-ui 取消开机自启失败${plain}"
+        echo -e "${red}x-ui cancel boot failure ${plain}"
     fi
 
     if [[ $# == 0 ]]; then
@@ -279,58 +264,43 @@ disable() {
 }
 
 show_log() {
-    echo && echo -n -e "面板使用过程中可能会输出许多 WARNING 日志，如果面板使用没有什么问题的话，那就没有问题，按回车继续: " && read temp
-    tail -f /etc/v2-ui/v2-ui.log
+    journalctl -u x-ui.service -e --no-pager -f
     if [[ $# == 0 ]]; then
         before_show_menu
     fi
 }
 
-install_bbr() {
-    bash <(curl -L -s https://github.com/sprov065/blog/raw/master/bbr.sh)
-    if [[ $? == 0 ]]; then
-        echo ""
-        echo -e "${green}安装 bbr 成功${plain}"
-    else
-        echo ""
-        echo -e "${red}下载 bbr 安装脚本失败，请检查本机能否连接 Github${plain}"
-    fi
+migrate_v2_ui() {
+    /usr/local/x-ui/x-ui v2-ui
 
+    before_show_menu
+}
+
+install_bbr() {
+    # temporary workaround for installing bbr
+    bash <(curl -L -s https://raw.githubusercontent.com/teddysun/across/master/bbr.sh)
+    echo ""
     before_show_menu
 }
 
 update_shell() {
-    wget -O /usr/bin/v2-ui -N --no-check-certificate https://github.com/sprov065/v2-ui/raw/master/v2-ui.sh
+    wget -O /usr/bin/x-ui -N --no-check-certificate https://github.com/vaxilu/x-ui/raw/master/x-ui.sh
     if [[ $? != 0 ]]; then
         echo ""
-        echo -e "${red}下载脚本失败，请检查本机能否连接 Github${plain}"
+        echo -e "${red} failed to download the script, please check whether the machine can connect to Github${plain}"
         before_show_menu
     else
-        chmod +x /usr/bin/v2-ui
-        echo -e "${green}升级脚本成功，请重新运行脚本${plain}" && exit 0
+        chmod +x /usr/bin/x-ui
+        echo -e "${green} upgrade script succeeded, please rerun script ${plain}" && exit 0
     fi
-}
-
-update_v2ray() {
-    bash <(curl -L -s https://install.direct/go.sh)
-    if [[ $? != 0 ]]; then
-        echo ""
-        echo -e "${red}更新 v2ray 失败，请自行检查错误信息${plain}"
-        echo ""
-    else
-        echo ""
-        echo -e "${green}更新 v2ray 成功${plain}"
-        echo ""
-    fi
-    before_show_menu
 }
 
 # 0: running, 1: not running, 2: not installed
 check_status() {
-    if [[ ! -f /etc/systemd/system/v2-ui.service ]]; then
+    if [[ ! -f /etc/systemd/system/x-ui.service ]]; then
         return 2
     fi
-    temp=$(systemctl status v2-ui | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
+    temp=$(systemctl status x-ui | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
     if [[ x"${temp}" == x"running" ]]; then
         return 0
     else
@@ -339,7 +309,7 @@ check_status() {
 }
 
 check_enabled() {
-    temp=$(systemctl is-enabled v2-ui)
+    temp=$(systemctl is-enabled x-ui)
     if [[ x"${temp}" == x"enabled" ]]; then
         return 0
     else
@@ -351,7 +321,7 @@ check_uninstall() {
     check_status
     if [[ $? != 2 ]]; then
         echo ""
-        echo -e "${red}面板已安装，请不要重复安装${plain}"
+        echo -e "${red} panel is installed, please do not install ${plain} again"
         if [[ $# == 0 ]]; then
             before_show_menu
         fi
@@ -365,7 +335,7 @@ check_install() {
     check_status
     if [[ $? == 2 ]]; then
         echo ""
-        echo -e "${red}请先安装面板${plain}"
+        echo -e "${red} please install the panel first ${plain}"
         if [[ $# == 0 ]]; then
             before_show_menu
         fi
@@ -379,72 +349,552 @@ show_status() {
     check_status
     case $? in
         0)
-            echo -e "面板状态: ${green}已运行${plain}"
+            echo -e "Panel Status: ${green} has run ${plain}"
             show_enable_status
             ;;
         1)
-            echo -e "面板状态: ${yellow}未运行${plain}"
+            echo -e "Panel Status: ${yellow} is not running ${plain}"
             show_enable_status
             ;;
         2)
-            echo -e "面板状态: ${red}未安装${plain}"
+            echo -e "Panel Status: ${red} not installed ${plain}"
     esac
+    show_xray_status
 }
 
 show_enable_status() {
     check_enabled
     if [[ $? == 0 ]]; then
-        echo -e "是否开机自启: ${green}是${plain}"
+        echo -e "Whether it starts automatically at boot: ${green} is ${plain}"
     else
-        echo -e "是否开机自启: ${red}否${plain}"
+        echo -e "Whether it starts automatically at boot: ${red}No ${plain}"
+    fi
+}
+
+check_xray_status() {
+    count=$(ps -ef | grep "xray-linux" | grep -v "grep" | wc -l)
+    if [[ count -ne 0 ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+show_xray_status() {
+    check_xray_status
+    if [[ $? == 0 ]]; then
+        echo -e "xray status: ${green} running ${plain}"
+    else
+        echo -e "xray status: ${red} not running ${plain}"
     fi
 }
 
 show_usage() {
-    echo "v2-ui 管理脚本使用方法: "
+    echo "How to use the x-ui management script: "
     echo "------------------------------------------"
-    echo "v2-ui              - 显示管理菜单 (功能更多)"
-    echo "v2-ui start        - 启动 v2-ui 面板"
-    echo "v2-ui stop         - 停止 v2-ui 面板"
-    echo "v2-ui restart      - 重启 v2-ui 面板"
-    echo "v2-ui status       - 查看 v2-ui 状态"
-    echo "v2-ui enable       - 设置 v2-ui 开机自启"
-    echo "v2-ui disable      - 取消 v2-ui 开机自启"
-    echo "v2-ui log          - 查看 v2-ui 日志"
-    echo "v2-ui update       - 更新 v2-ui 面板"
-    echo "v2-ui install      - 安装 v2-ui 面板"
-    echo "v2-ui uninstall    - 卸载 v2-ui 面板"
+    echo "x-ui - show admin menu (more functions)"
+    echo "x-ui start - start the x-ui panel"
+    echo "x-ui stop - stop the x-ui panel"
+    echo "x-ui restart - restart the x-ui panel"
+    echo "x-ui status - view x-ui status"
+    echo "x-ui enable - set x-ui to boot automatically"
+    echo "x-ui disable - cancel x-ui auto-start"
+    echo "x-ui log - view x-ui log"
+    echo "x-ui v2-ui - Migrate the v2-ui account data of this machine to x-ui"
+    echo "x-ui update - update x-ui panel"
+    echo "x-ui install - install x-ui panel"
+    echo "x-ui uninstall - uninstall x-ui panel"
     echo "------------------------------------------"
 }
 
 show_menu() {
     echo -e "
-  ${green}v2-ui 面板管理脚本${plain} ${red}${version}${plain}
---- https://blog.sprov.xyz/v2-ui ---
-  ${green}0.${plain} 退出脚本
-————————————————
-  ${green}1.${plain} 安装 v2-ui
-  ${green}2.${plain} 更新 v2-ui
-  ${green}3.${plain} 卸载 v2-ui
-————————————————
-  ${green}4.${plain} 重置用户名密码
-  ${green}5.${plain} 重置面板设置
-  ${green}6.${plain} 设置面板端口
-————————————————
-  ${green}7.${plain} 启动 v2-ui
-  ${green}8.${plain} 停止 v2-ui
-  ${green}9.${plain} 重启 v2-ui
- ${green}10.${plain} 查看 v2-ui 状态
- ${green}11.${plain} 查看 v2-ui 日志
-————————————————
- ${green}12.${plain} 设置 v2-ui 开机自启
- ${green}13.${plain} 取消 v2-ui 开机自启
-————————————————
- ${green}14.${plain} 一键安装 bbr (最新内核)
- ${green}15.${plain} 更新 v2ray
+  ${green}x-ui panel management script${plain}
+  ${green}0.${plain} exit script
+———————————————
+  ${green}1.${plain} install x-ui
+  ${green}2.${plain} update x-ui
+  ${green}3.${plain} uninstall x-ui
+———————————————
+  ${green}4.${plain} reset username and password
+  ${green}5.${plain} reset panel settings
+  ${green}6.${plain} set panel port
+———————————————
+  ${green}7.${plain} start x-ui
+  ${green}8.${plain} stop x-ui
+  ${green}9.${plain} restart x-ui
+ ${green}10.${plain} View x-ui status
+ ${green}11.${plain} View x-ui log
+———————————————
+ ${green}12.${plain} set x-ui to start automatically
+ ${green}13.${plain} Cancel x-ui auto-start
+———————————————
+ ${green}14.${plain} One-click install bbr (latest kernel)
  "
     show_status
-    echo && read -p "请输入选择 [0-14]: " num
+    echo && read -p "Please enter selection [0-14]: " num
+
+    case "${num}" in
+        0) exit 0
+        ;;
+        1) check_uninstall && install
+        ;;
+        2) check_install && ufi
+    fi
+
+    if [[ $# == 0 ]]; then
+        before_show_menu
+    fi
+}
+
+restart() {
+    systemctl restart x-ui
+    sleep 2
+    check_status
+    if [[ $? == 0 ]]; then
+        echo -e "${green}x-ui and xray restarted successfully ${plain}"
+    else
+        echo -e "${red} panel failed to restart, maybe because the startup time exceeded two seconds, please check the log information later ${plain}"
+    fi
+    if [[ $# == 0 ]]; then
+        before_show_menu
+    fi
+}
+
+status() {
+    systemctl status x-ui -l
+    if [[ $# == 0 ]]; then
+        before_show_menu
+    fi
+}
+
+enable() {
+    systemctl enable x-ui
+    if [[ $? == 0 ]]; then
+        echo -e "${green}x-ui set boot up successfully ${plain}"
+    else
+        echo -e "${red}x-ui failed to set boot auto-start ${plain}"
+    fi
+
+    if [[ $# == 0 ]]; then
+        before_show_menu
+    fi
+}
+
+disable() {
+    systemctl disable x-ui
+    if [[ $? == 0 ]]; then
+        echo -e "${green}x-ui canceled boot auto-start successfully ${plain}"
+    else
+        echo -e "${red}x-ui cancel boot failure ${plain}"
+    fi
+
+    if [[ $# == 0 ]]; then
+        before_show_menu
+    fi
+}
+
+show_log() {
+    journalctl -u x-ui.service -e --no-pager -f
+    if [[ $# == 0 ]]; then
+        before_show_menu
+    fi
+}
+
+migrate_v2_ui() {
+    /usr/local/x-ui/x-ui v2-ui
+
+    before_show_menu
+}
+
+install_bbr() {
+    # temporary workaround for installing bbr
+    bash <(curl -L -s https://raw.githubusercontent.com/teddysun/across/master/bbr.sh)
+    echo ""
+    before_show_menu
+}
+
+update_shell() {
+    wget -O /usr/bin/x-ui -N --no-check-certificate https://github.com/vaxilu/x-ui/raw/master/x-ui.sh
+    if [[ $? != 0 ]]; then
+        echo ""
+        echo -e "${red} failed to download the script, please check whether the machine can connect to Github${plain}"
+        before_show_menu
+    else
+        chmod +x /usr/bin/x-ui
+        echo -e "${green} upgrade script succeeded, please rerun script ${plain}" && exit 0
+    fi
+}
+
+# 0: running, 1: not running, 2: not installed
+check_status() {
+    if [[ ! -f /etc/systemd/system/x-ui.service ]]; then
+        return 2
+    fi
+    temp=$(systemctl status x-ui | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
+    if [[ x"${temp}" == x"running" ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+check_enabled() {
+    temp=$(systemctl is-enabled x-ui)
+    if [[ x"${temp}" == x"enabled" ]]; then
+        return 0
+    else
+        return 1;
+    fi
+}
+
+check_uninstall() {
+    check_status
+    if [[ $? != 2 ]]; then
+        echo ""
+        echo -e "${red} panel is installed, please do not install ${plain} again"
+        if [[ $# == 0 ]]; then
+            before_show_menu
+        fi
+        return 1
+    else
+        return 0
+    fi
+}
+
+check_install() {
+    check_status
+    if [[ $? == 2 ]]; then
+        echo ""
+        echo -e "${red} please install the panel first ${plain}"
+        if [[ $# == 0 ]]; then
+            before_show_menu
+        fi
+        return 1
+    else
+        return 0
+    fi
+}
+
+show_status() {
+    check_status
+    case $? in
+        0)
+            echo -e "Panel Status: ${green} has run ${plain}"
+            show_enable_status
+            ;;
+        1)
+            echo -e "Panel Status: ${yellow} is not running ${plain}"
+            show_enable_status
+            ;;
+        2)
+            echo -e "Panel Status: ${red} not installed ${plain}"
+    esac
+    show_xray_status
+}
+
+show_enable_status() {
+    check_enabled
+    if [[ $? == 0 ]]; then
+        echo -e "Whether it starts automatically at boot: ${green} is ${plain}"
+    else
+        echo -e "Whether it starts automatically at boot: ${red}No ${plain}"
+    fi
+}
+
+check_xray_status() {
+    count=$(ps -ef | grep "xray-linux" | grep -v "grep" | wc -l)
+    if [[ count -ne 0 ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+show_xray_status() {
+    check_xray_status
+    if [[ $? == 0 ]]; then
+        echo -e "xray status: ${green} running ${plain}"
+    else
+        echo -e "xray status: ${red} not running ${plain}"
+    fi
+}
+
+show_usage() {
+    echo "How to use the x-ui management script: "
+    echo "------------------------------------------"
+    echo "x-ui - show admin menu (more functions)"
+    echo "x-ui start - start the x-ui panel"
+    echo "x-ui stop - stop the x-ui panel"
+    echo "x-ui restart - restart the x-ui panel"
+    echo "x-ui status - view x-ui status"
+    echo "x-ui enable - set x-ui to boot automatically"
+    echo "x-ui disable - cancel x-ui auto-start"
+    echo "x-ui log - view x-ui log"
+    echo "x-ui v2-ui - Migrate the v2-ui account data of this machine to x-ui"
+    echo "x-ui update - update x-ui panel"
+    echo "x-ui install - install x-ui panel"
+    echo "x-ui uninstall - uninstall x-ui panel"
+    echo "------------------------------------------"
+}
+
+show_menu() {
+    echo -e "
+  ${green}x-ui panel management script${plain}
+  ${green}0.${plain} exit script
+———————————————
+  ${green}1.${plain} install x-ui
+  ${green}2.${plain} update x-ui
+  ${green}3.${plain} uninstall x-ui
+———————————————
+  ${green}4.${plain} reset username and password
+  ${green}5.${plain} reset panel settings
+  ${green}6.${plain} set panel port
+———————————————
+  ${green}7.${plain} start x-ui
+  ${green}8.${plain} stop x-ui
+  ${green}9.${plain} restart x-ui
+ ${green}10.${plain} View x-ui status
+ ${green}11.${plain} View x-ui log
+———————————————
+ ${green}12.${plain} set x-ui to start automatically
+ ${green}13.${plain} Cancel x-ui auto-start
+———————————————
+ ${green}14.${plain} One-click install bbr (latest kernel)
+ "
+    show_status
+    echo && read -p "Please enter selection [0-14]: " num
+
+    case "${num}" in
+        0) exit 0
+        ;;
+        1) check_uninstall && install
+        ;;
+        2) check_install && ufi
+    fi
+
+    if [[ $# == 0 ]]; then
+        before_show_menu
+    fi
+}
+
+restart() {
+    systemctl restart x-ui
+    sleep 2
+    check_status
+    if [[ $? == 0 ]]; then
+        echo -e "${green}x-ui and xray restarted successfully ${plain}"
+    else
+        echo -e "${red} panel failed to restart, maybe because the startup time exceeded two seconds, please check the log information later ${plain}"
+    fi
+    if [[ $# == 0 ]]; then
+        before_show_menu
+    fi
+}
+
+status() {
+    systemctl status x-ui -l
+    if [[ $# == 0 ]]; then
+        before_show_menu
+    fi
+}
+
+enable() {
+    systemctl enable x-ui
+    if [[ $? == 0 ]]; then
+        echo -e "${green}x-ui set boot up successfully ${plain}"
+    else
+        echo -e "${red}x-ui failed to set boot auto-start ${plain}"
+    fi
+
+    if [[ $# == 0 ]]; then
+        before_show_menu
+    fi
+}
+
+disable() {
+    systemctl disable x-ui
+    if [[ $? == 0 ]]; then
+        echo -e "${green}x-ui canceled boot auto-start successfully ${plain}"
+    else
+        echo -e "${red}x-ui cancel boot failure ${plain}"
+    fi
+
+    if [[ $# == 0 ]]; then
+        before_show_menu
+    fi
+}
+
+show_log() {
+    journalctl -u x-ui.service -e --no-pager -f
+    if [[ $# == 0 ]]; then
+        before_show_menu
+    fi
+}
+
+migrate_v2_ui() {
+    /usr/local/x-ui/x-ui v2-ui
+
+    before_show_menu
+}
+
+install_bbr() {
+    # temporary workaround for installing bbr
+    bash <(curl -L -s https://raw.githubusercontent.com/teddysun/across/master/bbr.sh)
+    echo ""
+    before_show_menu
+}
+
+update_shell() {
+    wget -O /usr/bin/x-ui -N --no-check-certificate https://github.com/vaxilu/x-ui/raw/master/x-ui.sh
+    if [[ $? != 0 ]]; then
+        echo ""
+        echo -e "${red} failed to download the script, please check whether the machine can connect to Github${plain}"
+        before_show_menu
+    else
+        chmod +x /usr/bin/x-ui
+        echo -e "${green} upgrade script succeeded, please rerun script ${plain}" && exit 0
+    fi
+}
+
+# 0: running, 1: not running, 2: not installed
+check_status() {
+    if [[ ! -f /etc/systemd/system/x-ui.service ]]; then
+        return 2
+    fi
+    temp=$(systemctl status x-ui | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
+    if [[ x"${temp}" == x"running" ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+check_enabled() {
+    temp=$(systemctl is-enabled x-ui)
+    if [[ x"${temp}" == x"enabled" ]]; then
+        return 0
+    else
+        return 1;
+    fi
+}
+
+check_uninstall() {
+    check_status
+    if [[ $? != 2 ]]; then
+        echo ""
+        echo -e "${red} panel is installed, please do not install ${plain} again"
+        if [[ $# == 0 ]]; then
+            before_show_menu
+        fi
+        return 1
+    else
+        return 0
+    fi
+}
+
+check_install() {
+    check_status
+    if [[ $? == 2 ]]; then
+        echo ""
+        echo -e "${red} please install the panel first ${plain}"
+        if [[ $# == 0 ]]; then
+            before_show_menu
+        fi
+        return 1
+    else
+        return 0
+    fi
+}
+
+show_status() {
+    check_status
+    case $? in
+        0)
+            echo -e "Panel Status: ${green} has run ${plain}"
+            show_enable_status
+            ;;
+        1)
+            echo -e "Panel Status: ${yellow} is not running ${plain}"
+            show_enable_status
+            ;;
+        2)
+            echo -e "Panel Status: ${red} not installed ${plain}"
+    esac
+    show_xray_status
+}
+
+show_enable_status() {
+    check_enabled
+    if [[ $? == 0 ]]; then
+        echo -e "Whether it starts automatically at boot: ${green} is ${plain}"
+    else
+        echo -e "Whether it starts automatically at boot: ${red}No ${plain}"
+    fi
+}
+
+check_xray_status() {
+    count=$(ps -ef | grep "xray-linux" | grep -v "grep" | wc -l)
+    if [[ count -ne 0 ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+show_xray_status() {
+    check_xray_status
+    if [[ $? == 0 ]]; then
+        echo -e "xray status: ${green} running ${plain}"
+    else
+        echo -e "xray status: ${red} not running ${plain}"
+    fi
+}
+
+show_usage() {
+    echo "How to use the x-ui management script: "
+    echo "------------------------------------------"
+    echo "x-ui - show admin menu (more functions)"
+    echo "x-ui start - start the x-ui panel"
+    echo "x-ui stop - stop the x-ui panel"
+    echo "x-ui restart - restart the x-ui panel"
+    echo "x-ui status - view x-ui status"
+    echo "x-ui enable - set x-ui to boot automatically"
+    echo "x-ui disable - cancel x-ui auto-start"
+    echo "x-ui log - view x-ui log"
+    echo "x-ui v2-ui - Migrate the v2-ui account data of this machine to x-ui"
+    echo "x-ui update - update x-ui panel"
+    echo "x-ui install - install x-ui panel"
+    echo "x-ui uninstall - uninstall x-ui panel"
+    echo "------------------------------------------"
+}
+
+show_menu() {
+    echo -e "
+  ${green}x-ui panel management script${plain}
+  ${green}0.${plain} exit script
+———————————————
+  ${green}1.${plain} install x-ui
+  ${green}2.${plain} update x-ui
+  ${green}3.${plain} uninstall x-ui
+———————————————
+  ${green}4.${plain} reset username and password
+  ${green}5.${plain} reset panel settings
+  ${green}6.${plain} set panel port
+———————————————
+  ${green}7.${plain} start x-ui
+  ${green}8.${plain} stop x-ui
+  ${green}9.${plain} restart x-ui
+ ${green}10.${plain} View x-ui status
+ ${green}11.${plain} View x-ui log
+———————————————
+ ${green}12.${plain} set x-ui to start automatically
+ ${green}13.${plain} Cancel x-ui auto-start
+———————————————
+ ${green}14.${plain} One-click install bbr (latest kernel)
+ "
+    show_status
+    echo && read -p "Please enter selection [0-14]: " num
 
     case "${num}" in
         0) exit 0
@@ -477,9 +927,7 @@ show_menu() {
         ;;
         14) install_bbr
         ;;
-        15) update_v2ray
-        ;;
-        *) echo -e "${red}请输入正确的数字 [0-15]${plain}"
+        *) echo -e "${red}Please enter the correct number [0-14]${plain}"
         ;;
     esac
 }
@@ -500,6 +948,8 @@ if [[ $# > 0 ]]; then
         "disable") check_install 0 && disable 0
         ;;
         "log") check_install 0 && show_log 0
+        ;;
+        "v2-ui") check_install 0 && migrate_v2_ui 0
         ;;
         "update") check_install 0 && update 0
         ;;
